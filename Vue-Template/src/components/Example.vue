@@ -41,7 +41,7 @@ export default {
             })
             .catch(error => console.log(error));
         */
-        console.log(Data);
+        
         if (isEmpty(Data)) return;
         this.bars = Data.data;
     },
@@ -52,6 +52,7 @@ export default {
             this.size = { width: target.clientWidth, height: target.clientHeight };
         },
         initChart() {
+            console.log("beep")
             // select the svg tag so that we can insert(render) elements, i.e., draw the chart, within it.
             let chartContainer = d3.select('#bar-svg')
 
@@ -128,6 +129,7 @@ export default {
     },
     watch: {
         rerender(newSize) {
+            console.log()
             if (!isEmpty(newSize)) {
                 d3.select('#bar-svg').selectAll('*').remove() // Clean all the elements in the chart
                 this.initChart()
