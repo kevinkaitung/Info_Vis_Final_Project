@@ -1,17 +1,20 @@
 <script lang="ts">
 
-import Notes from './components/Notes.vue'
 import Example from './components/Example.vue'
+<<<<<<< HEAD
 import Contours from './components/Contours.vue'
+=======
+import Auxiliary from './components/Auxiliary.vue'
+>>>>>>> 62cbfbfc1974011e9d855b730d9a5586c65ed74e
 /*
 import ExampleWithLegend from './components/ExampleWithLegend.vue';
 import ExampleWithInteractions from './components/ExampleWithInteractions.vue';*/
 
 export default {
   components: {
-    Notes,
     Example,
     Contours,
+    Auxiliary,
     /*
     ExampleWithLegend,
     ExampleWithInteractions*/
@@ -26,10 +29,8 @@ export default {
       <v-col cols="7">
         <Contours />
       </v-col>
-    </v-row>
-    <v-row no-gutters>
       <v-col>
-        <Notes />
+        <Auxiliary />
       </v-col>
     </v-row>
   </v-container>
