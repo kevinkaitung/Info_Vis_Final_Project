@@ -1,15 +1,15 @@
 <script lang="ts">
 
-import Notes from './components/Notes.vue'
 import Example from './components/Example.vue'
+import Auxiliary from './components/Auxiliary.vue'
 /*
 import ExampleWithLegend from './components/ExampleWithLegend.vue';
 import ExampleWithInteractions from './components/ExampleWithInteractions.vue';*/
 
 export default {
   components: {
-    Notes,
     Example,
+    Auxiliary,
     /*
     ExampleWithLegend,
     ExampleWithInteractions*/
@@ -21,13 +21,11 @@ export default {
 <template>
   <v-container id="main-container" class="d-flex flex-column flex-nowrap" fluid>
     <v-row no-gutters>
-      <v-col cols="5">
+      <v-col>
         <Example />
       </v-col>
-    </v-row>
-    <v-row no-gutters>
       <v-col>
-        <Notes />
+        <Auxiliary />
       </v-col>
     </v-row>
   </v-container>
