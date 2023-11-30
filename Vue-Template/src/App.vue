@@ -1,11 +1,8 @@
 <script lang="ts">
 
 import Example from './components/Example.vue'
-<<<<<<< HEAD
 import Contours from './components/Contours.vue'
-=======
 import Auxiliary from './components/Auxiliary.vue'
->>>>>>> 62cbfbfc1974011e9d855b730d9a5586c65ed74e
 /*
 import ExampleWithLegend from './components/ExampleWithLegend.vue';
 import ExampleWithInteractions from './components/ExampleWithInteractions.vue';*/
