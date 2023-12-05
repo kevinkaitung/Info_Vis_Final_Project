@@ -37,7 +37,7 @@ export default {
 
 
             filter_val: -1, 
-            layer_selected: -1, cmpt_selected: -1, cell_selected: -1,
+            layer_selected: -1, cmpt_selected: -1, cells_selected: [],
             clr: !(this.cmpt_selected) ? "orange" : "brown",
             lyr_val_to_ind: {11:0, 15:1},
 
@@ -81,7 +81,6 @@ export default {
 
     },
     methods: {
-
         shapeContains(inner_polygon, outer_polygon) {
             const geo = d3.geoPath()
             let bounds = geo.bounds(outer_polygon)
@@ -151,18 +150,21 @@ export default {
         xAxis: (g) => {
             const x = d3.scaleLinear([0, 300], [0, 300]);
             g.attr("transform", `translate(0,${200})`)
-            .style("font-size", "0.5em")
-            .call(d3.axisTop(x).ticks(300 / 200 * 10))
+            .style("font-size", "0.3em")
+            .call(d3.axisTop(x).tickSizeInner([3]).ticks(300 / 200 * 10))
             .call(g => g.select(".domain").remove())
             .call(g => g.selectAll(".tick").filter(d => x.domain().includes(d)).remove())
+            //.selectAll('line').attr("y2", -3)
         },
         yAxis: (g) => {
             const y = d3.scaleLinear([0, 200], [200, 0]);
             g.attr("transform", "translate(-1,0)")
-            .style("font-size", "0.5em")
-            .call(d3.axisRight(y))
+            .style("font-size", "0.3em")
+            .call(d3.axisRight(y).tickSizeInner([3]))
             .call(g => g.select(".domain").remove())
             .call(g => g.selectAll(".tick").filter(d => y.domain().includes(d)).remove())
+            //.selectAll('line').attr("x2", 3)
+            
         },
         onResize() {  // record the updated size of the target element
             let target = this.$refs.contourContainer as HTMLElement
@@ -173,11 +175,16 @@ export default {
 
             let v = this;
             let vox_contours = d3.contours().size([300, 200]).thresholds(v.threshold_vox)(v.grid_vox).map(v.transform),
+            empty_contour = d3.contours().size([300, 200]).thresholds([0, v.threshold_vox[0]])(v.grid_vox).map(v.transform)[0],
             cell_contours = v.generateContours(v.threshold_cell,v.grid_cell).slice(1).map((c) => c[1]),
             vox_contour_polygons = v.voxContourPolygons(vox_contours, this.grid_layer, this.grid_cmpt,v.shapeContains),
-            lyr_val_to_ind = {11:0, 15:1} 
-
-
+            lyr_val_to_ind = {11:0, 15:1},
+            colors = vox_contour_polygons.map((lyr) => {
+                if (lyr.length > 0) {
+                    return d3.scaleSequential(d3.extent(v.threshold_vox), d3.interpolateRgb("orange", "white"))(lyr[0].value)
+                }
+                else return ''
+            })
             // select the svg tag so that we can insert(render) elements, i.e., draw the chart, within it.
             let chartContainer = d3.select('#contour-svg').attr("viewBox", [0, 0, 300, 200]).style("border","1px solid black")
 
@@ -193,6 +200,35 @@ export default {
             .attr("y", 13)
             .attr("font-size", 6)
 
+            
+            const empty_space = chartContainer.append("g").
+            selectAll("path")
+            .data([empty_contour])
+            .join("path")
+            .attr("d", d3.geoPath())
+            .attr("fill", "white")
+            .on('dblclick', function(e,d) {
+                if(v.cmpt_selected > 0 && v.layer_selected > 0){
+                    d3.selectAll(".cells_" + v.cmpt_selected).attr("class", "cells_" + v.cmpt_selected).attr("fill", colors[v.layer_selected-1])
+                    .attr("fill-opacity", 1)
+                    cells.attr("visibility", "hidden")
+                    v.cmpt_selected = -1
+                    d3.selectAll(".layer_" + v.layer_selected).attr("visibility", "visible").attr("fill", colors[v.layer_selected-1])
+                    d3.selectAll(".layer_" + (v.layer_selected+1)).attr("visibility", "visible").attr("fill","white")
+                    
+                }
+                else if (v.layer_selected > 0) {
+                    d3.selectAll(".contours").attr("visibility", "visible")
+                    if(v.layer_selected != v.threshold_layer.slice(-1)){
+                       let val = vox_contour_polygons[v.layer_selected][0].value
+                       d3.selectAll(".layer_" + (v.layer_selected + 1)).attr("fill", colors[v.layer_selected])
+                    }
+                    v.filter_val = -1
+                    v.layer_selected = -1
+                }
+            })
+
+
             const dynamic_contours = vox_contour_polygons.forEach((layer) => { 
                 chartContainer.append("g")
                 .attr("stroke", "black")
@@ -200,8 +236,7 @@ export default {
                 .selectAll("path")
                 .data(layer)
                 .join("path")
-                //.attr("visibility", d => { return d.polygonNum == 3 ?  "visible" : "hidden" })
-                .attr("fill", d => v.color(d.value, v.filter_val,"orange"))
+                .attr("fill", d => colors[d.layer-1])
                 .attr("opacity", 1)
                 .attr("d", d3.geoPath())
                 .attr("class", function (d){ 
@@ -230,16 +265,21 @@ export default {
                             v.layer_selected = d.layer;
                             d3.selectAll(".contours").attr("visibility", "hidden")
                             d3.selectAll(".layer_" + d.layer)
-                            .attr("visibility", "visible")
-                            d3.selectAll(".layer_" + (d.layer+1))
-                            .attr("visibility", "visible").attr("fill","white")
-                            d3.select("#toptext2").text("last clicked: layer" + d.layer)
+                            .attr("visibility", "visible").attr("fill", colors[d.layer-1])
+                            if(v.layer_selected != v.threshold_layer.slice(-1)){
+                                d3.selectAll(".layer_" + (d.layer+1))
+                                .attr("visibility", "visible").attr("fill","white")
+                                d3.select("#toptext2").text("last clicked: layer" + d.layer)
+                            }
                         }
-                        d3.selectAll(".contours").each(function (d){
+                        else{
+                            d3.selectAll(".contours").each(function (d){
                             d3.select(this)
                             .transition().duration('50')
-                            .attr("fill", v.color(d.value,v.filter_val,"orange"))
-                        })
+                            .attr("fill", colors[d.layer-1])
+                            })
+                        }
+                        
                         
                         d3.select("#toptext").text("hovered: none")
                          //d3.selectAll("path.cmpt"+ v.lyr_val_to_ind[v.filter_val]).attr("visibility", "visible")
@@ -249,7 +289,7 @@ export default {
                             v.cmpt_selected = d.cmpt 
                             d3.select("#toptext2").text("last clicked: cmpt" + d.cmpt)
                             d3.selectAll(".contours").attr("visibility", "hidden")
-                            d3.selectAll(".cells_" + d.cmpt).attr("visibility", "visible")
+                            d3.selectAll(".cells_" + d.cmpt).attr("visibility", "visible").attr("fill", colors[d.layer-1])
                             d3.selectAll(".cmpt_" + d.cmpt).attr("visibility", "visible").attr("fill", "brown")
                             d3.selectAll(".ccmpt_" + d.cmpt)
                             .attr("visibility", "visible").attr("fill","white")
@@ -257,13 +297,16 @@ export default {
                         }
                         d3.selectAll(".cmpt_" + d.cmpt).transition()
                         .duration('50')
-                        .attr("fill",  v.cmpt_selected > 0 ? "brown" : d => v.color(d.value, v.filter_val, "orange"))
+                        .attr("fill",  v.cmpt_selected > 0 ? "brown" : d => colors[d.layer-1])
                         
                     }
                     d3.select("#toptext").text("hovered: none")
                 })
                     
             })
+
+            chartContainer.append("g").call(this.xAxis);
+            chartContainer.append("g") .call(this.yAxis);    
 
             let cells =  chartContainer.append("g").attr("visibility", "hidden")
                         .attr("fill","none")
@@ -272,8 +315,8 @@ export default {
                         .join("path")
                         .attr("class", function (d){return "cells_" + v.siteCmptIds[d.value]})
                         .attr("id", function (d){ return "site_" + d.value })
-                        .attr("fill", "orange")
                         .attr("fill-opacity", 1)
+                        .attr("fill", v.layer_selected > 0 ? colors[v.layer_selected-1] : "orange")
                         .attr("d", d3.geoPath())
                         .on('mouseover', function () {
                             d3.select(this).transition()
@@ -282,16 +325,16 @@ export default {
                             d3.select("#toptext").text("hovered: " + this.id)
                         })
                         .on('click', function(event, d) {
-                            let sval = d.value
-                            d3.select(this).attr("class", "cells" + v.siteCmptIds[d.value] + "_clicked").attr("fill-opacity", 0.8)
+                            v.cells_selected.push(d.value)
+                            d3.select(this).attr("class", "cells_" + v.siteCmptIds[d.value] + " clicked").attr("fill-opacity", 0.8)
                             d3.select("#toptext2").text("last clicked: " + this.id)
                         })
                         .on('mouseout', function () {
                             let sval = parseInt(this.id.substring(5))
                             d3.select(this).transition()
                             .duration('50')
-                            .attr('fill', "orange").attr("fill-opacity", 1)
-                            d3.selectAll(".cells" + v.siteCmptIds[sval] + "_clicked").transition()
+                            .attr('fill', v.layer_selected > 0 ? colors[v.layer_selected-1] : "orange").attr("fill-opacity", 1)
+                            d3.selectAll(".clicked").transition()
                             .duration('50')
                             .attr("fill-opacity", 0.8)
                             d3.select("#toptext").text("hovered: none")
