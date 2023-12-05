@@ -159,3 +159,5 @@ dmypy.json
 # dataset
 /Vue-Template/data/small_dataset
 /Vue-Template/data/large_dataset
+/Vue-Template/data/temp_data_2.json
+/Vue-Template/data/temp_data_s50.json
