@@ -301,7 +301,11 @@ export default {
             
             chartContainer.append("g").call(this.xAxis);
             chartContainer.append("g") .call(this.yAxis);    
-        }
+        },
+        // level_selected = 0 (for layer), 1 (for component), 2 (for cell)
+        passParamsToAuxiliary(level_selected, id_selected) {
+            this.emitter.emit('selected_info_passed', {'level_selected': level_selected, 'id_selected': id_selected});
+        },
     },
     watch: {
         rerender(newSize) { 
@@ -309,7 +313,16 @@ export default {
                 d3.select('#contour-svg').selectAll('*').remove() // Clean all the elements in the chart
                 this.initChart();
             }
-        }
+        },
+        layer_selected(new_selected, old_selected) {
+            this.passParamsToAuxiliary(0, new_selected);
+        },
+        cmpt_selected(new_selected, old_selected) {
+            this.passParamsToAuxiliary(1, new_selected);
+        },
+        cell_selected(new_selected, old_selected) {
+            this.passParamsToAuxiliary(2, new_selected);
+        },
     },
     // The following are general setup for resize events.
     mounted() {

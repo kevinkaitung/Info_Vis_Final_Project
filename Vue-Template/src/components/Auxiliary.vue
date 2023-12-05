@@ -3,7 +3,7 @@ import * as d3 from "d3";
 // import Data from '../../data/demo.json'; /* Example of reading in data directly from file */
 import axios from "axios";
 import { isEmpty, debounce } from "lodash";
-import Data from "../../data/temp_data_s50.json";
+import Data from "../../data/temp_data_s30.json";
 
 import {
   Bar,
@@ -48,6 +48,8 @@ export default {
   // Anything in here will only be executed once.
   // Refer to the lifecycle in Vue.js for more details, mentioned at the very top of this file.
   created() {
+    // register for the event bus
+    this.emitter.on("selected_info_passed", this.recieveParamsFromContours);
     // fetch the data via GET request when we init this component.
     // In axios anything we send back in the response are always bound to the "data" property.
     /*
@@ -68,15 +70,16 @@ export default {
     //   });
     // }
     this.selected_slice = 0;
-    this.current_selected_regions.layerIDs = [1];
-    this.current_selected_regions.componentIDs = [
-      1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-    ];
-    this.current_selected_regions.cellIDs = [1189, 1195];
-    this.current_selected_regions.cellIDs = [60, 69, 78, 86, 88];
+    //still need to let bar chart to show overview of current level
+    this.current_selected_regions.layerIDs = [1, 2];
+    this.current_selected_regions.componentIDs = [];
+    this.current_selected_regions.cellIDs = [];
 
     this.collectScatterPlotValues(0);
-    this.collectBarChartValues(2);
+    this.collectBarChartValues(0);
+
+    
+    this.current_selected_regions.layerIDs = [];
 
     // this.layer_thresh = Data.layer_thresh[selected];
     // this.cmpt_thresh = Data.component_thresh[selected];
@@ -87,15 +90,33 @@ export default {
     // this.cell_grid = Data.cell_grid[selected];
 
     this.temp_range = {
-      max: Math.max(...Data.vox_grid[this.selected_slice]),
-      min: Math.min(...Data.vox_grid[this.selected_slice]),
+      max: Math.max(...Data.vox_grid /*[this.selected_slice]*/),
+      min: Math.min(...Data.vox_grid /*[this.selected_slice]*/),
     };
     this.OH_range = {
-      max: Math.max(...Data.OH_grid[this.selected_slice]),
-      min: Math.min(...Data.OH_grid[this.selected_slice]),
+      max: Math.max(...Data.OH_grid /*[this.selected_slice]*/),
+      min: Math.min(...Data.OH_grid /*[this.selected_slice]*/),
     };
   },
   methods: {
+    recieveParamsFromContours(evt) {
+      console.log(evt.id_selected + " " + evt.level_selected);
+      if (evt.level_selected == 0) {
+        this.current_selected_regions.layerIDs.push(evt.id_selected);
+      } else if (evt.level_selected == 1) {
+        this.current_selected_regions.componentIDs.push(evt.id_selected);
+      } else if (evt.level_selected == 2) {
+        this.current_selected_regions.cellIDs.push(evt.id_selected);
+      }
+      // clean previous chart data
+      // may not work for cell level unless I can recieve all selected IDs every time the user adds the cell
+      this.data_scatter_plot = [];
+      this.data_bar_chart = [];
+      this.collectScatterPlotValues(evt.level_selected);
+      this.collectBarChartValues(evt.level_selected);
+
+      this.plotChart();
+    },
     onResize() {
       // record the updated size of the target element
       let target = this.$refs.barContainer as HTMLElement;
@@ -108,23 +129,23 @@ export default {
       let compared_data: any;
       if (selected_level == 0) {
         // layer part
-        raw_data = Data.layer_grid[this.selected_slice];
+        raw_data = Data.layer_grid /*[this.selected_slice]*/;
         compared_data = this.current_selected_regions.layerIDs;
       } else if (selected_level == 1) {
         // component part
-        raw_data = Data.component_grid[this.selected_slice];
+        raw_data = Data.component_grid /*[this.selected_slice]*/;
         compared_data = this.current_selected_regions.componentIDs;
       } else if (selected_level == 2) {
         // cell part
-        raw_data = Data.cell_grid[this.selected_slice];
+        raw_data = Data.cell_grid /*[this.selected_slice]*/;
         compared_data = this.current_selected_regions.cellIDs;
       }
       raw_data.forEach((ID, i) => {
         compared_data.forEach((match) => {
           if (ID == match) {
             this.data_scatter_plot.push({
-              temp: Data.vox_grid[this.selected_slice][i],
-              OH: Data.OH_grid[this.selected_slice][i],
+              temp: Data.vox_grid /*[this.selected_slice]*/[i],
+              OH: Data.OH_grid /*[this.selected_slice]*/[i],
             });
           }
         });
@@ -135,37 +156,35 @@ export default {
       let compared_data: any;
       if (selected_level == 0) {
         // layer part
-        raw_data = Data.layer_grid[this.selected_slice]
-        compared_data = this.current_selected_regions.layerIDs
+        raw_data = Data.layer_grid /*[this.selected_slice]*/;
+        compared_data = this.current_selected_regions.layerIDs;
       } else if (selected_level == 1) {
         // component part
-        raw_data = Data.component_grid[this.selected_slice]
-        compared_data = this.current_selected_regions.componentIDs
+        raw_data = Data.component_grid /*[this.selected_slice]*/;
+        compared_data = this.current_selected_regions.componentIDs;
       } else if (selected_level == 2) {
         // cell part
-        raw_data = Data.cell_grid[this.selected_slice]
-        compared_data = this.current_selected_regions.cellIDs
+        raw_data = Data.cell_grid /*[this.selected_slice]*/;
+        compared_data = this.current_selected_regions.cellIDs;
       }
       compared_data.forEach((match) => {
-          let arr_temp: number[] = [];
-          let arr_OH: number[] = [];
-          raw_data.forEach((layerID, i) => {
-            if (layerID == match) {
-              arr_temp.push(Data.vox_grid[this.selected_slice][i]);
-              arr_OH.push(Data.OH_grid[this.selected_slice][i]);
-            }
-          });
-          this.data_bar_chart.push({
-            id: match,
-            voxCount: arr_temp.length,
-            meanTemp: Number(d3.mean(arr_temp) ? d3.mean(arr_temp) : 0),
-            meanOH: Number(d3.mean(arr_OH) ? d3.mean(arr_OH) : 0),
-            stdTemp: Number(
-              d3.deviation(arr_temp) ? d3.deviation(arr_temp) : 0
-            ),
-            stdOH: Number(d3.deviation(arr_OH) ? d3.deviation(arr_OH) : 0),
-          });
+        let arr_temp: number[] = [];
+        let arr_OH: number[] = [];
+        raw_data.forEach((layerID, i) => {
+          if (layerID == match) {
+            arr_temp.push(Data.vox_grid /*[this.selected_slice]*/[i]);
+            arr_OH.push(Data.OH_grid /*[this.selected_slice]*/[i]);
+          }
         });
+        this.data_bar_chart.push({
+          id: match,
+          voxCount: arr_temp.length,
+          meanTemp: Number(d3.mean(arr_temp) ? d3.mean(arr_temp) : 0),
+          meanOH: Number(d3.mean(arr_OH) ? d3.mean(arr_OH) : 0),
+          stdTemp: Number(d3.deviation(arr_temp) ? d3.deviation(arr_temp) : 0),
+          stdOH: Number(d3.deviation(arr_OH) ? d3.deviation(arr_OH) : 0),
+        });
+      });
     },
     scatterPlot() {
       // select the svg tag so that we can insert(render) elements, i.e., draw the chart, within it.
@@ -448,17 +467,20 @@ export default {
         .style("font-size", "10px")
         .style("position", "absolute");
     },
+    plotChart() {
+      d3.select("#bar-svg2").selectAll("*").remove(); // Clean all the elements in the chart
+      this.scatterPlot();
+
+      d3.select("#tooltip").remove();
+
+      d3.select("#bar-svg3").selectAll("*").remove(); // Clean all the elements in the chart
+      this.barChart();
+    },
   },
   watch: {
     rerender(newSize) {
       if (!isEmpty(newSize)) {
-        d3.select("#bar-svg2").selectAll("*").remove(); // Clean all the elements in the chart
-        this.scatterPlot();
-
-        d3.select("#tooltip").remove();
-
-        d3.select("#bar-svg3").selectAll("*").remove(); // Clean all the elements in the chart
-        this.barChart();
+        this.plotChart();
       }
     },
   },

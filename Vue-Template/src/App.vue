@@ -26,6 +26,9 @@ export default {
       <v-col cols="8">
         <Contours />
       </v-col>
+      <v-col>
+        <Auxiliary />
+      </v-col>
     </v-row>
   </v-container>
 </template>
