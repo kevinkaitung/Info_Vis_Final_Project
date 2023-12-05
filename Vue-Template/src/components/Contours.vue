@@ -37,7 +37,7 @@ export default {
 
 
             filter_val: -1, 
-            layer_selected: -1, cmpt_selected: -1, cell_selected: -1,
+            layer_selected: -1, cmpt_selected: -1, cells_selected: [],
             clr: !(this.cmpt_selected) ? "orange" : "brown",
             lyr_val_to_ind: {11:0, 15:1},
 
@@ -282,7 +282,8 @@ export default {
                             d3.select("#toptext").text("hovered: " + this.id)
                         })
                         .on('click', function(event, d) {
-                            let sval = d.value
+                            v.cells_selected.push(d.value)
+                            console.log(v.cells_selected)
                             d3.select(this).attr("class", "cells" + v.siteCmptIds[d.value] + "_clicked").attr("fill-opacity", 0.8)
                             d3.select("#toptext2").text("last clicked: " + this.id)
                         })
