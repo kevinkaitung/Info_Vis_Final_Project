@@ -1,6 +1,7 @@
 <script lang="ts">
 
 import Example from './components/Example.vue'
+import Contours from './components/Contours.vue'
 import Auxiliary from './components/Auxiliary.vue'
 /*
 import ExampleWithLegend from './components/ExampleWithLegend.vue';
@@ -9,6 +10,7 @@ import ExampleWithInteractions from './components/ExampleWithInteractions.vue';*
 export default {
   components: {
     Example,
+    Contours,
     Auxiliary,
     /*
     ExampleWithLegend,
@@ -21,11 +23,8 @@ export default {
 <template>
   <v-container id="main-container" class="d-flex flex-column flex-nowrap" fluid>
     <v-row no-gutters>
-      <v-col>
-        <Example />
-      </v-col>
-      <v-col>
-        <Auxiliary />
+      <v-col cols="8">
+        <Contours />
       </v-col>
     </v-row>
   </v-container>
