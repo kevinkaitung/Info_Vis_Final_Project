@@ -100,6 +100,10 @@ export default {
   },
   methods: {
     recieveParamsFromContours(evt) {
+      // click for reverse navigation
+      if (evt.id_selected == -1) {
+        return;
+      }
       console.log(evt.id_selected + " " + evt.level_selected);
       // clear all previous selected records
       this.current_selected_regions.layerIDs = [];
@@ -147,7 +151,7 @@ export default {
       }
       // select cells, show scatter plot of these cells and no change on bar chart
       else if (evt.level_selected == 2) {
-        this.current_selected_regions.cellIDs.push(evt.id_selected);
+        this.current_selected_regions.cellIDs = evt.id_selected;
         // scatter plot for component
         this.data_scatter_plot = [];
         this.collectScatterPlotValues(2);
@@ -355,7 +359,6 @@ export default {
         .range([this.size.height / 2 - this.margin.bottom, this.margin.top]) //bottom side to the top side on the screen
         .domain([yMin < 0 ? yMin : 0, yMax]);
 
-      console.log("check: " + yScale.domain()[1]);
 
       const xAxis = chartContainer
         .append("g")
@@ -431,7 +434,6 @@ export default {
       // A function that change this tooltip when the user hover a point.
       // Its opacity is set to 1: we can now see it. Plus it set the text and position of tooltip depending on the datapoint (d)
       let showTooltip = function (event, d) {
-        console.log("hover: " + tooltip.property("offsetWidth"));
         tooltip.transition().duration(100).style("opacity", 1);
         tooltip
           .html(
