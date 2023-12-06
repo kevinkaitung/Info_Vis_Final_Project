@@ -38,7 +38,7 @@ export default {
 
 
             filter_val: -1, 
-            layer_selected: -1, cmpt_selected: -1, cells_selected: [],
+            layer_selected: -1, cmpt_selected: -1, cells_selected: [], cells_count: 0,
             clr: !(this.cmpt_selected) ? "orange" : "brown",
             lyr_val_to_ind: {11:0, 15:1},
 
@@ -254,7 +254,7 @@ export default {
                     d3.selectAll(".layer_" + v.layer_selected).attr("visibility", "visible").attr("fill", colors[v.layer_selected-1])
                     d3.selectAll(".layer_" + (v.layer_selected+1)).attr("visibility", "visible").attr("fill","white")
                     v.cells_selected = []
-                    // v.cells_count = 0
+                    v.cells_count = v.cells_selected.length
                 }
                 else if (v.layer_selected > 0) {
                     d3.selectAll(".contours").attr("visibility", "visible")
@@ -426,8 +426,8 @@ export default {
         cmpt_selected(new_selected, old_selected) {
             this.passParamsToAuxiliary(1, new_selected);
         },
-        cell_selected(new_selected, old_selected) {
-            this.passParamsToAuxiliary(2, new_selected);
+        cells_count(new_selected, old_selected) {
+            this.passParamsToAuxiliary(2, this.cells_selected);
         },
     },
     // The following are general setup for resize events.
