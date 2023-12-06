@@ -14,6 +14,7 @@ interface CategoricalBar extends Bar{
 // Lifecycle in vue.js: https://vuejs.org/guide/essentials/lifecycle.html#lifecycle-diagram
 
 export default {
+    props: ['thing'],
     data() {
         // Here we define the local states of this component. If you think the component as a class, then these are like its private variables.
         return {
@@ -41,15 +42,13 @@ export default {
             clr: !(this.cmpt_selected) ? "orange" : "brown",
             lyr_val_to_ind: {11:0, 15:1},
 
-            beep: 0
-
         }
     },
    
     computed: {
         // Re-render the chart whenever the window is resized or the data changes (and data is non-empty)
         rerender() {
-            return (!isEmpty(this.bars)) && this.size
+            return (!isEmpty(this.grid_vox)) && this.size
         },
     },
      // Anything in here will only be executed once.
@@ -94,16 +93,20 @@ export default {
         },
 
         transform: ({type, value, coordinates}) => {
-            let count = 0
-            return {type, value, coordinates: coordinates.map(rings => {
+            let voxCount = 0
+            let coords = coordinates.map(rings => {
                 return rings.map(points => {
-                    return points.map(([x, y]) => ([x,200-y]));
-                });
-            })};
+                    return points.map(([x, y]) => {
+                        voxCount++
+                        return [x,200-y]
+                    });
+                })
+            })
+            return {type, value, coordinates: coords, layerVox: voxCount}
         },
 
         voxContourPolygons: (contours, grid_layer, grid_cmpt, shapeContains) => {
-            let pNum = 0
+            let pNum = 0, lyrVoxArr = [contours[0].layerVox-contours[1].layerVox, contours[1].layerVox, 0]
             let contourPolygons = contours.map((layer, l_i) => {
                 return layer.coordinates.map((polygon, polygon_i) => {
                     let cmpt_val = -1
@@ -112,7 +115,8 @@ export default {
                         let index = Math.round(x)+ (300 * Math.round(200-y))
                             cmpt_val = (grid_layer[index] == l_i + 1 && grid_cmpt[index] > cmpt_val) ? grid_cmpt[index] : cmpt_val
                     })
-                    return {type: "Polygon", value: layer.value, coordinates: polygon, layer: l_i+1, cmpt: cmpt_val, polygonNum: pNum}
+                    return {type: "Polygon", value: layer.value, coordinates: polygon, layer: l_i+1, 
+                    layerVox: lyrVoxArr[l_i], cmpt: cmpt_val, polygonNum: pNum}
                 })
             })
 
@@ -177,8 +181,50 @@ export default {
                 }
                 else return ''
             })
+
+            let showTooltip = function (event, d) {
+            console.log("hover: " + tooltip.property("offsetWidth"));
+            tooltip.transition().duration(100).style("visibility","visible");
+            let elemText = v.layer_selected > 0 ? 
+                v.cmpt_selected > 0? "Cell " + d.value : "Component " + d.cmpt 
+                : "Layer " + d.layer,
+                y_offset = v.layer_selected > 0 && v.cmpt_selected > 0 ? 15 : 0,
+                voxCount = d.layerVox
+            tooltip
+            .html(
+                elemText+
+              "<br>Avg: " +
+              d.meanTemp +
+              "<br>Std: " +
+              d.stdTemp +
+              "<br>No. Voxels: " +
+              voxCount
+            ) 
+            .style("left", event.x - tooltip.property("offsetWidth") + "px")
+            .style("top", event.y - tooltip.property("offsetHeight") - y_offset + "px");
+            };
+
+            let moveTooltip = function (event, d) {
+                let y_offset = v.layer_selected > 0 && v.cmpt_selected > 0 ? 15 : 0
+            tooltip
+            .style("left", event.x - tooltip.property("offsetWidth") + "px")
+            .style("top", event.y - tooltip.property("offsetHeight") - y_offset + "px");
+            };
+
+        // A function that change this tooltip when the leaves a point: just need to set opacity to 0 again
+            let hideTooltip = function (event, d) {
+            tooltip.transition().duration(100).style("visibility","hidden");
+            };
+
+            function zoomed(e) { chartContainer.attr("transform", e.transform); } 
+            const zoom = d3.zoom().scaleExtent([1, 3]).on("zoom", zoomed);
+
             // select the svg tag so that we can insert(render) elements, i.e., draw the chart, within it.
-            let chartContainer = d3.select('#contour-svg').attr("viewBox", [0, 0, 300, 200]).style("border","1px solid black")
+            let chartContainer = d3.select('#contour-svg')
+            .attr("viewBox", [0, 0, 300, 200])
+            .style("border","1px solid black")
+            .call(zoom).append("g")
+            
 
             chartContainer.append("text")
             .text("hovered: none")
@@ -192,7 +238,7 @@ export default {
             .attr("y", 13)
             .attr("font-size", 6)
 
-            
+
             const empty_space = chartContainer.append("g").
             selectAll("path")
             .data([empty_contour])
@@ -239,6 +285,7 @@ export default {
                 )
                 .attr("id", function (d){ return "p" + d.layer + "_" + d.polygonNum})
                 .on('mouseover', function (event, d) {
+                    showTooltip(event, d)
                     if(v.layer_selected < 0){
                         d3.selectAll(".layer_" + d.layer).transition()
                         .duration('50')
@@ -251,7 +298,9 @@ export default {
                         d3.select("#toptext").text("hovered: cmpt" + d.cmpt)
                     }
                 })
+                .on("mousemove", moveTooltip)
                 .on('click mouseout', function(event, d) { 
+                    hideTooltip(event, d)
                     if(v.layer_selected < 0){
                         if (event.type == "click"){
                             v.filter_val = d.value
@@ -308,38 +357,57 @@ export default {
                         .join("path")
                         .attr("class", function (d){return "cells_" + v.siteCmptIds[d.value]})
                         .attr("id", function (d){ return "site_" + d.value })
-                        .attr("fill-opacity", 1)
+                        .attr("opacity", 1)
                         .attr("fill", v.layer_selected > 0 ? colors[v.layer_selected-1] : "orange")
                         .attr("d", d3.geoPath())
-                        .on('mouseover', function () {
+                        .on('mouseover', function (event, d) {
+                            showTooltip(event, d)
                             d3.select(this).transition()
                             .duration('50')
-                            .attr('fill', "yellow").attr("fill-opacity", 1)
+                            .attr('fill', "yellow").attr("opacity", 1)
                             d3.select("#toptext").text("hovered: " + this.id)
                         })
+                        .on("mousemove", moveTooltip)
                         .on('click', function(event, d) {
-                            v.cells_selected.push(d.value)
-                            v.cells_count = v.cells_selected.length
-                            console.log(v.cells_selected)
-                            d3.select(this).attr("class", "cells_" + v.siteCmptIds[d.value] + " clicked").attr("fill-opacity", 0.8)
+                            if(!v.cells_selected.includes(d.value)){
+                                v.cells_selected.push(d.value)
+                                d3.select(this).attr('opacity', 0.9)
+                            }
                             d3.select("#toptext2").text("last clicked: " + this.id)
                         })
-                        .on('mouseout', function () {
-                            let sval = parseInt(this.id.substring(5))
-                            d3.select(this).transition()
-                            .duration('50')
-                            .attr('fill', v.layer_selected > 0 ? colors[v.layer_selected-1] : "orange").attr("fill-opacity", 1)
-                            d3.selectAll(".clicked").transition()
-                            .duration('50')
-                            .attr("fill-opacity", 0.8)
+                        .on('mouseout', function (event, d) {
+                            hideTooltip(event, d)
+                            let selection =  d3.select(this).transition()
+                                .duration('50')
+                                
+                            if(!v.cells_selected.includes(d.value)){
+                                selection.attr("opacity", 1).attr('fill', colors[v.layer_selected-1])
+                            }
+                            else{
+                                selection.attr('fill', "yellow").attr('opacity', 0.9)
+                            }
                             d3.select("#toptext").text("hovered: none")
                         })
-            
+        
 
-            
             chartContainer.append("g").call(this.xAxis);
-            chartContainer.append("g") .call(this.yAxis);    
-        },
+            chartContainer.append("g") .call(this.yAxis);
+            
+            let tooltip = d3.select("#root")
+            .append("div")
+            .attr("id", "iv_tooltip")
+            .style("visibility", "hidden")
+            .attr("class", "tooltip")
+            .style("background-color", "black")
+            .style("color", "white")
+            .style("border-radius", "5px")
+            .style("padding", "10px")
+            .style("font-size", "10px")
+            .style("position", "absolute");
+
+
+            },
+
         // level_selected = 0 (for layer), 1 (for component), 2 (for cell)
         passParamsToAuxiliary(level_selected, id_selected) {
             this.emitter.emit('selected_info_passed', {'level_selected': level_selected, 'id_selected': id_selected});
@@ -377,13 +445,23 @@ export default {
 </script>
 
 <!-- "ref" registers a reference to the HTML element so that we can access it via the reference in Vue.  -->
-<!-- We use flex (d-flex) to arrange the layout-->
+<!-- We use flex (d-flex) to arrange the layout // 100% 66%-->
 <template>
-    <div class="chart-container d-flex" ref="contourContainer">
-        <svg id="contour-svg" width="900px" height="600px">
+    <div class="chart-container" ref="contourContainer">
+        <div> 
+            <svg id="contour-svg" width="100%" height="66%">
             <!-- all the visual elements we create in initChart() will be inserted here in DOM-->
-        </svg>
+            </svg>
+        </div>
+        <div>
+            <h3 id="stats_header">Stats for Slice</h3>
+            <p><b>Average Temp:</b> {{"avg"}} </p>
+            <p><b>Std Dev Temp:</b> {{"stdDev"}}</p>
+            <p><b>Avg OH: </b> {{"avg"}} </p>
+            <p><b>Std Dev OH: </b> {{"stdDev"}} </p>
+        </div>
     </div>
+    
 </template>
 
 <style scoped>
