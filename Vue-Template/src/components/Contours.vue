@@ -216,8 +216,13 @@ export default {
             tooltip.transition().duration(100).style("visibility","hidden");
             };
 
-            function zoomed(e) { chartContainer.attr("transform", e.transform); } 
-            const zoom = d3.zoom().scaleExtent([1, 3]).on("zoom", zoomed);
+            function zoomed(e) { 
+                chartContainer.attr("transform", e.transform); 
+            } 
+            const zoom = d3.zoom().translateExtent([[0,0],[300,200]]).scaleExtent([1, 3]).on("zoom", zoomed)
+            .filter(function (event) {
+                return event.type != "dblclick";
+            });
 
             // select the svg tag so that we can insert(render) elements, i.e., draw the chart, within it.
             let chartContainer = d3.select('#contour-svg')
@@ -246,6 +251,7 @@ export default {
             .attr("d", d3.geoPath())
             .attr("fill", "white")
             .on('dblclick', function(e,d) {
+
                 if(v.cmpt_selected > 0 && v.layer_selected > 0){
                     d3.selectAll(".cells_" + v.cmpt_selected).attr("class", "cells_" + v.cmpt_selected).attr("fill", colors[v.layer_selected-1])
                     .attr("fill-opacity", 1)
