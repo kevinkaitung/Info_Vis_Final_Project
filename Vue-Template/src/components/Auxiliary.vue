@@ -40,6 +40,7 @@ export default {
       data_bar_chart: [] as BarChart[],
       scatter_plot_showing_level: "" as string,
       bar_chart_showing_level: "" as string,
+      current_level: -1 as number,
     };
   },
   computed: {
@@ -77,7 +78,7 @@ export default {
     this.current_selected_regions.layerIDs = [1, 2];
     this.current_selected_regions.componentIDs = [];
     this.current_selected_regions.cellIDs = [];
-
+    this.current_level = 0;
     this.collectScatterPlotValues(0);
     this.collectBarChartValues(0);
 
@@ -102,18 +103,45 @@ export default {
     recieveParamsFromContours(evt) {
       // click for reverse navigation
       if (evt.id_selected == -1) {
-        return;
+        // back to all components in selected layer
+        if (this.current_level == 2) {
+          // scatter plot for
+          this.data_scatter_plot = [];
+          this.collectScatterPlotValues(0);
+          // bar chart for
+          this.current_selected_regions.componentIDs = [];
+          this.current_selected_regions.layerIDs.forEach(ele => {
+            for (let j = 0; j < LevelDepInfo.layers_components[ele].length; j++) {
+              this.current_selected_regions.componentIDs.push(
+                LevelDepInfo.layers_components[ele][j]
+              );
+            }
+          });
+          this.data_bar_chart = [];
+          this.collectBarChartValues(1);
+            
+          this.current_level = 1;
+        }
+        // back to all layers
+        else if (this.current_level == 1) {
+          // scatter plot for
+          this.data_scatter_plot = [];
+          this.current_selected_regions.layerIDs = [1, 2];
+          this.collectScatterPlotValues(0);
+          // bar chart for
+          this.data_bar_chart = [];
+          this.collectBarChartValues(0);
+
+          this.current_level = 0;
+        }
       }
-      console.log(evt.id_selected + " " + evt.level_selected);
-      // clear all previous selected records
-      this.current_selected_regions.layerIDs = [];
-      this.current_selected_regions.componentIDs = [];
-      this.current_selected_regions.cellIDs = [];
       // select layer, show scater plot of this layer and bar chart of components in this layer
-      if (evt.level_selected == 0) {
+      else if (evt.level_selected == 0) {
         // for showing scatter plot
+        this.current_selected_regions.layerIDs = [];
         this.current_selected_regions.layerIDs.push(evt.id_selected);
         // for showing bar chart
+        this.current_selected_regions.componentIDs = [];
         for (
           let i = 0;
           i < LevelDepInfo.layers_components[evt.id_selected].length;
@@ -129,10 +157,14 @@ export default {
         // bar chart for component
         this.data_bar_chart = [];
         this.collectBarChartValues(1);
+
+        this.current_level = 1;
       }
       // select component, show scatter plot of this component and bar chart of cells in this component
       else if (evt.level_selected == 1) {
+        this.current_selected_regions.componentIDs = [];
         this.current_selected_regions.componentIDs.push(evt.id_selected);
+        this.current_selected_regions.cellIDs = [];
         for (
           let i = 0;
           i < LevelDepInfo.components_cells[evt.id_selected].length;
@@ -148,14 +180,20 @@ export default {
         // bar chart for cell
         this.data_bar_chart = [];
         this.collectBarChartValues(2);
+
+        this.current_level = 2;
       }
       // select cells, show scatter plot of these cells and no change on bar chart
-      else if (evt.level_selected == 2) {
+      // bug waited to be fixed (if have selected cells in cell level and db click to reverse navigation, it would notify event twice)
+      // temporarily use evt.id_selected != "" to avoid it
+      else if (evt.level_selected == 2 && evt.id_selected != "") {
         this.current_selected_regions.cellIDs = evt.id_selected;
         // scatter plot for component
         this.data_scatter_plot = [];
         this.collectScatterPlotValues(2);
         // no cleaning on data_bar_chart to remain the bar chart
+
+        this.current_level = 2;
       }
       this.plotChart();
     },
@@ -382,7 +420,7 @@ export default {
           })`
         )
         .append("text")
-        .text("Ids")
+        .text(this.bar_chart_showing_level + " Ids")
         .style("font-size", ".8rem");
 
       const yLabel = chartContainer
