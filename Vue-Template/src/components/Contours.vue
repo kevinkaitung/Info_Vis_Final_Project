@@ -14,6 +14,7 @@ interface CategoricalBar extends Bar{
 // Lifecycle in vue.js: https://vuejs.org/guide/essentials/lifecycle.html#lifecycle-diagram
 
 export default {
+    props: ['thing'],
     data() {
         // Here we define the local states of this component. If you think the component as a class, then these are like its private variables.
         return {
@@ -41,15 +42,13 @@ export default {
             clr: !(this.cmpt_selected) ? "orange" : "brown",
             lyr_val_to_ind: {11:0, 15:1},
 
-            beep: 0
-
         }
     },
    
     computed: {
         // Re-render the chart whenever the window is resized or the data changes (and data is non-empty)
         rerender() {
-            return (!isEmpty(this.bars)) && this.size
+            return (!isEmpty(this.grid_vox)) && this.size
         },
     },
      // Anything in here will only be executed once.
@@ -217,8 +216,15 @@ export default {
             tooltip.transition().duration(100).style("visibility","hidden");
             };
 
+            function zoomed(e) { chartContainer.attr("transform", e.transform); } 
+            const zoom = d3.zoom().scaleExtent([1, 3]).on("zoom", zoomed);
+
             // select the svg tag so that we can insert(render) elements, i.e., draw the chart, within it.
-            let chartContainer = d3.select('#contour-svg').attr("viewBox", [0, 0, 300, 200]).style("border","1px solid black")
+            let chartContainer = d3.select('#contour-svg')
+            .attr("viewBox", [0, 0, 300, 200])
+            .style("border","1px solid black")
+            .call(zoom).append("g")
+            
 
             chartContainer.append("text")
             .text("hovered: none")
@@ -232,7 +238,7 @@ export default {
             .attr("y", 13)
             .attr("font-size", 6)
 
-            
+
             const empty_space = chartContainer.append("g").
             selectAll("path")
             .data([empty_contour])
@@ -382,7 +388,7 @@ export default {
                             }
                             d3.select("#toptext").text("hovered: none")
                         })
-            
+        
 
             chartContainer.append("g").call(this.xAxis);
             chartContainer.append("g") .call(this.yAxis);
@@ -439,13 +445,23 @@ export default {
 </script>
 
 <!-- "ref" registers a reference to the HTML element so that we can access it via the reference in Vue.  -->
-<!-- We use flex (d-flex) to arrange the layout-->
+<!-- We use flex (d-flex) to arrange the layout // 100% 66%-->
 <template>
-    <div class="chart-container d-flex" ref="contourContainer">
-        <svg id="contour-svg" width="900px" height="600px">
+    <div class="chart-container" ref="contourContainer">
+        <div> 
+            <svg id="contour-svg" width="100%" height="66%">
             <!-- all the visual elements we create in initChart() will be inserted here in DOM-->
-        </svg>
+            </svg>
+        </div>
+        <div>
+            <h3 id="stats_header">Stats for Slice</h3>
+            <p><b>Average Temp:</b> {{"avg"}} </p>
+            <p><b>Std Dev Temp:</b> {{"stdDev"}}</p>
+            <p><b>Avg OH: </b> {{"avg"}} </p>
+            <p><b>Std Dev OH: </b> {{"stdDev"}} </p>
+        </div>
     </div>
+    
 </template>
 
 <style scoped>
