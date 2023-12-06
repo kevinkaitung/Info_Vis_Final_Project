@@ -141,12 +141,6 @@ export default {
             else if (val == filter_val) return base_color
             else return "white"
         },
-        stroke(val, filter_val){
-            if (filter_val == -1) return 0.5
-            else if (filter_val == 11) return 0.5
-            else if (filter_val == 15 && filter_val == val) return 0.5
-            else return 0
-        },
         xAxis: (g) => {
             const x = d3.scaleLinear([0, 300], [0, 300]);
             g.attr("transform", `translate(0,${200})`)
@@ -154,7 +148,6 @@ export default {
             .call(d3.axisTop(x).tickSizeInner([3]).ticks(300 / 200 * 10))
             .call(g => g.select(".domain").remove())
             .call(g => g.selectAll(".tick").filter(d => x.domain().includes(d)).remove())
-            //.selectAll('line').attr("y2", -3)
         },
         yAxis: (g) => {
             const y = d3.scaleLinear([0, 200], [200, 0]);
@@ -163,7 +156,6 @@ export default {
             .call(d3.axisRight(y).tickSizeInner([3]))
             .call(g => g.select(".domain").remove())
             .call(g => g.selectAll(".tick").filter(d => y.domain().includes(d)).remove())
-            //.selectAll('line').attr("x2", 3)
             
         },
         onResize() {  // record the updated size of the target element
@@ -215,7 +207,7 @@ export default {
                     v.cmpt_selected = -1
                     d3.selectAll(".layer_" + v.layer_selected).attr("visibility", "visible").attr("fill", colors[v.layer_selected-1])
                     d3.selectAll(".layer_" + (v.layer_selected+1)).attr("visibility", "visible").attr("fill","white")
-                    
+                    v.cells_selected = []
                 }
                 else if (v.layer_selected > 0) {
                     d3.selectAll(".contours").attr("visibility", "visible")
@@ -326,6 +318,7 @@ export default {
                         })
                         .on('click', function(event, d) {
                             v.cells_selected.push(d.value)
+                            console.log(v.cells_selected)
                             d3.select(this).attr("class", "cells_" + v.siteCmptIds[d.value] + " clicked").attr("fill-opacity", 0.8)
                             d3.select("#toptext2").text("last clicked: " + this.id)
                         })
