@@ -371,6 +371,7 @@ export default {
                         .on('click', function(event, d) {
                             if(!v.cells_selected.includes(d.value)){
                                 v.cells_selected.push(d.value)
+                                v.cells_count = v.cells_selected.length
                                 d3.select(this).attr('opacity', 0.9)
                             }
                             d3.select("#toptext2").text("last clicked: " + this.id)
