@@ -98,16 +98,14 @@ export default {
         },
 
         transform: ({type, value, coordinates}) => {
-            let voxCount = 0
             let coords = coordinates.map(rings => {
                 return rings.map(points => {
                     return points.map(([x, y]) => {
-                        voxCount++
                         return [x,200-y]
                     });
                 })
             })
-            return {type, value, coordinates: coords, layerVox: voxCount}
+            return {type, value, coordinates: coords}
         },
 
         voxContourPolygons: (contours, grid_layer, grid_cmpt, shapeContains) => {
@@ -117,7 +115,7 @@ export default {
                     let cmpt_val = -1
                     pNum++
                     polygon[0].forEach(([x,y]) => {
-                        let index = Math.round(x)+ (300 * Math.round(200-y))
+                        let index = Math.floor(x)+ (300 * Math.floor(200-y))
                             cmpt_val = (grid_layer[index] == l_i + 1 && grid_cmpt[index] > cmpt_val) ? grid_cmpt[index] : cmpt_val
                     })
                     return {type: "Polygon", value: layer.value, coordinates: polygon, layer: l_i+1, 
@@ -179,7 +177,6 @@ export default {
             empty_contour = d3.contours().size([300, 200]).thresholds([0, v.threshold_vox[0]])(v.grid_vox).map(v.transform)[0],
             cell_contours = v.generateContours(v.threshold_cell,v.grid_cell).slice(1).map((c) => c[1]),
             vox_contour_polygons = v.voxContourPolygons(vox_contours, this.grid_layer, this.grid_cmpt,v.shapeContains),
-            lyr_val_to_ind = {11:0, 15:1},
             colors = vox_contour_polygons.map((lyr) => {
                 if (lyr.length > 0) {
                     return d3.scaleSequential(d3.extent(v.threshold_vox), d3.interpolateRgb("orange", "white"))(lyr[0].value)
@@ -197,15 +194,12 @@ export default {
                 : "",
             cellText =  v.cmpt_selected > 0 ? "<br>Cell " + d.value  : "",
             elemText = lyrText + cmptText + cellText,
-            voxCount = d.layerVox,
             pos = d3.pointer(event),
             y_offset = v.cmpt_selected > 0 ? 15 : 0
             tooltip
             .html(
             elemText+
-              "<br>No. Voxels: " +
-              voxCount +
-              "<br>y: " + Math.round(pos[0]) + ", z: " +  Math.round(pos[1])
+              "<br>y: " + Math.floor(pos[0]) + ", z: " +  Math.floor(pos[1])
             )
             .style("left", event.x - tooltip.property("offsetWidth") + "px")
             .style("top", event.y - tooltip.property("offsetHeight") - y_offset + "px");
@@ -225,26 +219,11 @@ export default {
                 return event.type != "dblclick";
             });
 
-
             // select the svg tag so that we can insert(render) elements, i.e., draw the chart, within it.
             let chartContainer = d3.select('#contour-svg')
             .attr("viewBox", [0, 0, 300, 200])
             .style("border","1px solid black")
             .call(zoom).append("g")
-            
-
-            chartContainer.append("text")
-            .text("hovered: none")
-            .attr("id", "toptext").attr("x", 2)
-            .attr("y", 5)
-            .attr("font-size", 6)
-
-            chartContainer.append("text")
-            .text("last clicked: none")
-            .attr("id", "toptext2").attr("x", 2)
-            .attr("y", 13)
-            .attr("font-size", 6)
-
 
             const empty_space = chartContainer.append("g").
             selectAll("path")
@@ -253,7 +232,6 @@ export default {
             .attr("d", d3.geoPath())
             .attr("fill", "white")
             .on('dblclick', function(e,d) {
-
                 if(v.cmpt_selected > 0 && v.layer_selected > 0){
                     d3.selectAll(".cells_" + v.cmpt_selected).attr("class", "cells_" + v.cmpt_selected).attr("fill", colors[v.layer_selected-1])
                     .attr("fill-opacity", 1)
@@ -329,10 +307,7 @@ export default {
                             .attr("fill", colors[d.layer-1])
                             })
                         }
-                        
-                        
                         d3.select("#toptext").text("hovered: none")
-                         //d3.selectAll("path.cmpt"+ v.lyr_val_to_ind[v.filter_val]).attr("visibility", "visible")
                     }
                     else if(v.cmpt_selected < 0 && d.value == v.filter_val){
                         if (event.type == "click"){
@@ -352,11 +327,7 @@ export default {
                     }
                     d3.select("#toptext").text("hovered: none")
                 })
-                    
             })
-
-            chartContainer.append("g").call(this.xAxis);
-            chartContainer.append("g") .call(this.yAxis);    
 
             let cells =  chartContainer.append("g").attr("visibility", "hidden")
                         .attr("fill","none")
