@@ -23,7 +23,7 @@ export default {
 <template>
   <v-container id="main-container" class="d-flex flex-column flex-nowrap" fluid>
     <v-row no-gutters>
-      <v-col cols="8">
+      <v-col cols="8" align-self="center">
         <Contours />
       </v-col>
       <v-col>

@@ -22,6 +22,8 @@ export default {
             size: { width: 0, height: 0 } as ComponentSize,
             margin: {left: 40, right: 20, top: 20, bottom: 60} as Margin, 
 
+            slice: -1,
+
             grid_vox: [] as Number[],
             threshold_vox: [] as Number[],
 
@@ -35,6 +37,7 @@ export default {
             threshold_cell: [] as Number[],
 
             siteCmptIds: [] as Number[],
+
 
 
             filter_val: -1, 
@@ -75,11 +78,13 @@ export default {
         this.grid_cell = Data.cell_grid;
         this.threshold_cell = Data.cell_thresh;
         this.siteCmptIds = Data.siteCmptIds
+        this.slice = Data.slice
 
         
 
     },
     methods: {
+        
         shapeContains(inner_polygon, outer_polygon) {
             const geo = d3.geoPath()
             let bounds = geo.bounds(outer_polygon)
@@ -183,33 +188,29 @@ export default {
             })
 
             let showTooltip = function (event, d) {
-            console.log("hover: " + tooltip.property("offsetWidth"));
-            tooltip.transition().duration(100).style("visibility","visible");
-            let elemText = v.layer_selected > 0 ? 
-                v.cmpt_selected > 0? "Cell " + d.value : "Component " + d.cmpt 
-                : "Layer " + d.layer,
-                y_offset = v.layer_selected > 0 && v.cmpt_selected > 0 ? 15 : 0,
-                voxCount = d.layerVox
+            if (event.type == "mouseover"){
+                tooltip.transition().duration(100).style("visibility","visible");
+            }
+            let lyrText = v.layer_selected > 0 ? "Layer " + v.layer_selected : "Layer " + d.layer,
+            cmptText = v.layer_selected > 0 ? 
+                v.cmpt_selected > 0? "<br>Component " + v.cmpt_selected : "<br>Component " + d.cmpt 
+                : "",
+            cellText =  v.cmpt_selected > 0 ? "<br>Cell " + d.value  : "",
+            elemText = lyrText + cmptText + cellText,
+            voxCount = d.layerVox,
+            pos = d3.pointer(event),
+            y_offset = v.cmpt_selected > 0 ? 15 : 0
             tooltip
             .html(
-                elemText+
-              "<br>Avg: " +
-              d.meanTemp +
-              "<br>Std: " +
-              d.stdTemp +
+            elemText+
               "<br>No. Voxels: " +
-              voxCount
-            ) 
+              voxCount +
+              "<br>y: " + Math.round(pos[0]) + ", z: " +  Math.round(pos[1])
+            )
             .style("left", event.x - tooltip.property("offsetWidth") + "px")
             .style("top", event.y - tooltip.property("offsetHeight") - y_offset + "px");
             };
 
-            let moveTooltip = function (event, d) {
-                let y_offset = v.layer_selected > 0 && v.cmpt_selected > 0 ? 15 : 0
-            tooltip
-            .style("left", event.x - tooltip.property("offsetWidth") + "px")
-            .style("top", event.y - tooltip.property("offsetHeight") - y_offset + "px");
-            };
 
         // A function that change this tooltip when the leaves a point: just need to set opacity to 0 again
             let hideTooltip = function (event, d) {
@@ -223,6 +224,7 @@ export default {
             .filter(function (event) {
                 return event.type != "dblclick";
             });
+
 
             // select the svg tag so that we can insert(render) elements, i.e., draw the chart, within it.
             let chartContainer = d3.select('#contour-svg')
@@ -304,7 +306,7 @@ export default {
                         d3.select("#toptext").text("hovered: cmpt" + d.cmpt)
                     }
                 })
-                .on("mousemove", moveTooltip)
+                .on("mousemove", showTooltip)
                 .on('click mouseout', function(event, d) { 
                     hideTooltip(event, d)
                     if(v.layer_selected < 0){
@@ -373,7 +375,7 @@ export default {
                             .attr('fill', "yellow").attr("opacity", 1)
                             d3.select("#toptext").text("hovered: " + this.id)
                         })
-                        .on("mousemove", moveTooltip)
+                        .on("mousemove", showTooltip)
                         .on('click', function(event, d) {
                             if(!v.cells_selected.includes(d.value)){
                                 v.cells_selected.push(d.value)
@@ -454,20 +456,18 @@ export default {
 <!-- "ref" registers a reference to the HTML element so that we can access it via the reference in Vue.  -->
 <!-- We use flex (d-flex) to arrange the layout // 100% 66%-->
 <template>
+    <div  style="font-size:30px;"><b>Turbulent Combustion Visualization</b></div>
     <div class="chart-container" ref="contourContainer">
+        <div style="font-size:20px;"><b>z</b></div>
         <div> 
             <svg id="contour-svg" width="100%" height="66%">
             <!-- all the visual elements we create in initChart() will be inserted here in DOM-->
             </svg>
         </div>
-        <div>
-            <h3 id="stats_header">Stats for Slice</h3>
-            <p><b>Average Temp:</b> {{"avg"}} </p>
-            <p><b>Std Dev Temp:</b> {{"stdDev"}}</p>
-            <p><b>Avg OH: </b> {{"avg"}} </p>
-            <p><b>Std Dev OH: </b> {{"stdDev"}} </p>
-        </div>
+        <div style="text-align:right;font-size:20px;" ><b>y</b></div>
+        <div style="font-size:25px;"><b>x</b> = {{this.slice}}</div>
     </div>
+    
     
 </template>
 
