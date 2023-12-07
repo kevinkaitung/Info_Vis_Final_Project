@@ -110,8 +110,12 @@ export default {
           this.collectScatterPlotValues(0);
           // bar chart for
           this.current_selected_regions.componentIDs = [];
-          this.current_selected_regions.layerIDs.forEach(ele => {
-            for (let j = 0; j < LevelDepInfo.layers_components[ele].length; j++) {
+          this.current_selected_regions.layerIDs.forEach((ele) => {
+            for (
+              let j = 0;
+              j < LevelDepInfo.layers_components[ele].length;
+              j++
+            ) {
               this.current_selected_regions.componentIDs.push(
                 LevelDepInfo.layers_components[ele][j]
               );
@@ -119,7 +123,7 @@ export default {
           });
           this.data_bar_chart = [];
           this.collectBarChartValues(1);
-            
+
           this.current_level = 1;
         }
         // back to all layers
@@ -387,7 +391,7 @@ export default {
 
       let xScale = d3
         .scaleBand()
-        .rangeRound([this.margin.left, this.size.width - this.margin.right])
+        .range([this.margin.left, this.size.width - this.margin.right])
         .domain(xCategories)
         .padding(0.1); // spacing between the categories
 
@@ -397,14 +401,13 @@ export default {
         .range([this.size.height / 2 - this.margin.bottom, this.margin.top]) //bottom side to the top side on the screen
         .domain([yMin < 0 ? yMin : 0, yMax]);
 
-
       const xAxis = chartContainer
         .append("g")
         .attr(
           "transform",
           `translate(0, ${this.size.height / 2 - this.margin.bottom})`
         )
-        .call(d3.axisBottom(xScale));
+      xAxis.call(d3.axisBottom(xScale));
 
       const yAxis = chartContainer
         .append("g")
@@ -497,8 +500,20 @@ export default {
         tooltip.transition().duration(100).style("opacity", 0);
       };
 
+      //zooming functionality
+      const zoom = d3
+        .zoom()
+        .scaleExtent([1, 3])
+        //.translateExtent([[this.margin.left, 0],[this.size.width - this.margin.right, this.size.height]])
+        .on("zoom", zoomed);
+
+      chartContainer
+        .call(zoom);
+
       const barchart = chartContainer
-        .append("g")
+        .append("g");
+      
+      barchart
         .selectAll("rect")
         .data<BarChart>(this.data_bar_chart) // TypeScript expression. This always expects an array of objects.
         //.join('rect')
@@ -517,7 +532,9 @@ export default {
         .on("mouseleave", hideTooltip);
 
       const error_bars = chartContainer
-        .append("g")
+        .append("g");
+      
+      error_bars
         .selectAll("path")
         .data<BarChart>(this.data_bar_chart)
         .join("path")
@@ -552,6 +569,36 @@ export default {
         .style("padding", "10px")
         .style("font-size", "10px")
         .style("position", "absolute");
+      let marginLeft = this.margin.left;
+      let sizeWidth = this.size.width;
+      let marginRight = this.margin.right;
+      let local_data_bar_chart = this.data_bar_chart;
+      function zoomed({transform}) {
+        // recover the new scale
+        xScale.range([marginLeft, sizeWidth - marginRight].map(d => transform.applyX(d)));
+        
+        barchart
+          .selectAll("rect")
+          .attr("x", (d: BarChart) => xScale(String(d.id)) as number)
+          .attr("width", xScale.bandwidth())
+        
+        // clear error bars
+        error_bars
+          .selectAll("path")
+          .remove();
+
+        // plot error bars again
+        error_bars
+          .selectAll("path")
+          .data<BarChart>(local_data_bar_chart)
+          .join("path")
+          .attr("d", erro_bar)
+          .style("fill", "none")
+          .style("stroke", "#000000")
+          .style("opacity", 1.0);
+        
+        xAxis.call(d3.axisBottom(xScale));
+      }
     },
     plotChart() {
       d3.select("#bar-svg2").selectAll("*").remove(); // Clean all the elements in the chart
