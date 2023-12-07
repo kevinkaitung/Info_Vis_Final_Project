@@ -428,9 +428,9 @@ export default {
 <!-- We use flex (d-flex) to arrange the layout // 100% 66%-->
 <template>
     <div  style="font-size:30px;"><b>Turbulent Combustion Visualization</b></div>
-    <div class="chart-container" ref="contourContainer">
+    <div class="chart-container">
         <div style="font-size:20px;"><b>z</b></div>
-        <div> 
+        <div ref="contourContainer"> 
             <svg id="contour-svg" width="100%" height="66%">
             <!-- all the visual elements we create in initChart() will be inserted here in DOM-->
             </svg>
