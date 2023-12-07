@@ -54,6 +54,7 @@ export default {
   created() {
     // register for the event bus
     this.emitter.on("selected_info_passed", this.recieveParamsFromContours);
+    this.emitter.on("hovered_info_passed", this.recieveHoveredID);
     // fetch the data via GET request when we init this component.
     // In axios anything we send back in the response are always bound to the "data" property.
     /*
@@ -209,6 +210,19 @@ export default {
 
         this.replotScatterPlot();
       }
+    },
+    recieveHoveredID(evt) {
+      let chartContainer = d3.select("#bar-svg3").selectAll("rect");
+      chartContainer.filter(function (d, i) {
+        if (d.id == evt.id_hovered) {
+          if (evt.is_hover_in == true) {
+            d3.select(this).attr("fill", "yellow");
+          }
+          else {
+            d3.select(this).attr("fill", "#ADD8E6");
+          }
+        }
+      });
     },
     onResize() {
       // record the updated size of the target element
@@ -520,6 +534,12 @@ export default {
       let hideTooltip = function (event, d) {
         tooltip.transition().duration(100).style("opacity", 0);
       };
+      let barChangeColor = function (event, d, obj: any) {
+        obj.attr("fill", "yellow");
+      };
+      let barReverseColor = function (event, d, obj: any) {
+        obj.attr("fill", "#ADD8E6");
+      };
 
       // zoom scale limit
       let zoomScaLimit = 0;
@@ -555,9 +575,15 @@ export default {
           Math.abs(yScale(yScale.domain()[0]) - yScale(d.meanTemp))
         ) // this substraction is reversed so the result is non-negative
         .attr("fill", "#ADD8E6")
-        .on("mouseover", showTooltip)
+        .on("mouseover", function (event, d) {
+          showTooltip(event, d);
+          barChangeColor(event, d, d3.select(this));
+        })
         .on("mousemove", moveTooltip)
-        .on("mouseleave", hideTooltip);
+        .on("mouseleave", function (event, d) {
+          hideTooltip(event, d);
+          barReverseColor(event, d, d3.select(this));
+        });
 
       const error_bars = chartContainer.append("g");
 
