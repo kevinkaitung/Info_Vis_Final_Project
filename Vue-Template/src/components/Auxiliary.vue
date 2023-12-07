@@ -38,7 +38,7 @@ export default {
       selected_slice: 0 as number,
       data_scatter_plot: [] as ScatterPlot[],
       data_bar_chart: [] as BarChart[],
-      scatter_plot_showing_level: "" as string,
+      // scatter_plot_showing_level: "" as string,
       bar_chart_showing_level: "" as string,
       current_level: -1 as number,
     };
@@ -138,6 +138,8 @@ export default {
 
           this.current_level = 0;
         }
+        this.replotScatterPlot();
+        this.replotBarChart();
       }
       // select layer, show scater plot of this layer and bar chart of components in this layer
       else if (evt.level_selected == 0) {
@@ -163,6 +165,9 @@ export default {
         this.collectBarChartValues(1);
 
         this.current_level = 1;
+        
+        this.replotScatterPlot();
+        this.replotBarChart();
       }
       // select component, show scatter plot of this component and bar chart of cells in this component
       else if (evt.level_selected == 1) {
@@ -186,6 +191,9 @@ export default {
         this.collectBarChartValues(2);
 
         this.current_level = 2;
+
+        this.replotScatterPlot();
+        this.replotBarChart();
       }
       // select cells, show scatter plot of these cells and no change on bar chart
       // bug waited to be fixed (if have selected cells in cell level and db click to reverse navigation, it would notify event twice)
@@ -198,8 +206,9 @@ export default {
         // no cleaning on data_bar_chart to remain the bar chart
 
         this.current_level = 2;
+
+        this.replotScatterPlot();
       }
-      this.plotChart();
     },
     onResize() {
       // record the updated size of the target element
@@ -215,17 +224,17 @@ export default {
         // layer part
         raw_data = Data.layer_grid /*[this.selected_slice]*/;
         compared_data = this.current_selected_regions.layerIDs;
-        this.scatter_plot_showing_level = "Layer";
+        // this.scatter_plot_showing_level = "Layer";
       } else if (selected_level == 1) {
         // component part
         raw_data = Data.component_grid /*[this.selected_slice]*/;
         compared_data = this.current_selected_regions.componentIDs;
-        this.scatter_plot_showing_level = "Component";
+        // this.scatter_plot_showing_level = "Component";
       } else if (selected_level == 2) {
         // cell part
         raw_data = Data.cell_grid /*[this.selected_slice]*/;
         compared_data = this.current_selected_regions.cellIDs;
-        this.scatter_plot_showing_level = "Cells";
+        // this.scatter_plot_showing_level = "Cell";
       }
       raw_data.forEach((ID, i) => {
         compared_data.forEach((match) => {
@@ -355,7 +364,7 @@ export default {
         .style("text-anchor", "middle")
         .style("font-weight", "bold")
         .text(
-          "Temperature/OH of Voxels in Level " + this.scatter_plot_showing_level
+          "Temperature/OH of Voxels in Selected Regions" /*+ this.scatter_plot_showing_level*/
         ); // text content
 
       let cnt = d3
@@ -383,6 +392,8 @@ export default {
       d3.extent(
         this.data_bar_chart.map((d: BarChart) => d.meanTemp as number)
       ) as [number, number];
+      // sort x-axis region ids
+      this.data_bar_chart.sort((a: BarChart, b: BarChart) => a.id - b.id);
       let xCategories: string[] = [
         ...new Set(
           this.data_bar_chart.map((d: BarChart) => String(d.id) as string)
@@ -401,13 +412,23 @@ export default {
         .range([this.size.height / 2 - this.margin.bottom, this.margin.top]) //bottom side to the top side on the screen
         .domain([yMin < 0 ? yMin : 0, yMax]);
 
+      let axs = d3.axisBottom(xScale);
+
+      let filtered_ticks = xCategories;
+      let tick_label_size = 30;
+      // only filter ticks when the number of cell id exceeds threshhold
+      if (xScale.bandwidth() < tick_label_size) {
+        filtered_ticks = xCategories.filter(function (v, i) {
+          return i % Math.round(tick_label_size / xScale.bandwidth()) === 0;
+        });
+      }
       const xAxis = chartContainer
         .append("g")
         .attr(
           "transform",
           `translate(0, ${this.size.height / 2 - this.margin.bottom})`
         )
-      xAxis.call(d3.axisBottom(xScale));
+        .call(axs.tickValues(filtered_ticks));
 
       const yAxis = chartContainer
         .append("g")
@@ -500,19 +521,26 @@ export default {
         tooltip.transition().duration(100).style("opacity", 0);
       };
 
+      // zoom scale limit
+      let zoomScaLimit = 0;
+      if (this.current_level == 0) {
+        zoomScaLimit = 1;
+      } else if (this.current_level == 1) {
+        zoomScaLimit = 3;
+      } else if (this.current_level == 2) {
+        zoomScaLimit = 15;
+      }
       //zooming functionality
       const zoom = d3
         .zoom()
-        .scaleExtent([1, 3])
+        .scaleExtent([1, zoomScaLimit])
         //.translateExtent([[this.margin.left, 0],[this.size.width - this.margin.right, this.size.height]])
         .on("zoom", zoomed);
 
-      chartContainer
-        .call(zoom);
+      chartContainer.call(zoom);
 
-      const barchart = chartContainer
-        .append("g");
-      
+      const barchart = chartContainer.append("g");
+
       barchart
         .selectAll("rect")
         .data<BarChart>(this.data_bar_chart) // TypeScript expression. This always expects an array of objects.
@@ -531,9 +559,8 @@ export default {
         .on("mousemove", moveTooltip)
         .on("mouseleave", hideTooltip);
 
-      const error_bars = chartContainer
-        .append("g");
-      
+      const error_bars = chartContainer.append("g");
+
       error_bars
         .selectAll("path")
         .data<BarChart>(this.data_bar_chart)
@@ -573,19 +600,19 @@ export default {
       let sizeWidth = this.size.width;
       let marginRight = this.margin.right;
       let local_data_bar_chart = this.data_bar_chart;
-      function zoomed({transform}) {
+      function zoomed({ transform }) {
         // recover the new scale
-        xScale.range([marginLeft, sizeWidth - marginRight].map(d => transform.applyX(d)));
-        
+        xScale.range(
+          [marginLeft, sizeWidth - marginRight].map((d) => transform.applyX(d))
+        );
+
         barchart
           .selectAll("rect")
           .attr("x", (d: BarChart) => xScale(String(d.id)) as number)
-          .attr("width", xScale.bandwidth())
-        
+          .attr("width", xScale.bandwidth());
+
         // clear error bars
-        error_bars
-          .selectAll("path")
-          .remove();
+        error_bars.selectAll("path").remove();
 
         // plot error bars again
         error_bars
@@ -596,14 +623,22 @@ export default {
           .style("fill", "none")
           .style("stroke", "#000000")
           .style("opacity", 1.0);
-        
-        xAxis.call(d3.axisBottom(xScale));
+
+        tick_label_size = 30;
+        // only filter ticks when the number of cell id exceeds threshhold
+        if (xScale.bandwidth() < tick_label_size) {
+          filtered_ticks = xCategories.filter(function (v, i) {
+            return i % Math.round(tick_label_size / xScale.bandwidth()) === 0;
+          });
+        }
+        xAxis.call(axs.tickValues(filtered_ticks));
       }
     },
-    plotChart() {
+    replotScatterPlot() {
       d3.select("#bar-svg2").selectAll("*").remove(); // Clean all the elements in the chart
       this.scatterPlot();
-
+    },
+    replotBarChart() {
       d3.select("#tooltip").remove();
 
       d3.select("#bar-svg3").selectAll("*").remove(); // Clean all the elements in the chart
@@ -613,7 +648,8 @@ export default {
   watch: {
     rerender(newSize) {
       if (!isEmpty(newSize)) {
-        this.plotChart();
+        this.replotScatterPlot();
+        this.replotBarChart();
       }
     },
   },
