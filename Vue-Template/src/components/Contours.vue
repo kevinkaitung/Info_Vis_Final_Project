@@ -157,7 +157,8 @@ export default {
             })
 
             let showTooltip = function (event, d) {
-            if (event.type == "mouseover"){
+            if((v.layer_selected < 0 || d.layer == v.layer_selected) || (v.cmpt_selected > 0 && d.layer == undefined)){
+                if (event.type == "mouseover"){
                 tooltip.transition().duration(100).style("visibility","visible");
             }
             let lyrText = v.layer_selected > 0 ? "Layer " + v.layer_selected : "Layer " + d.layer,
@@ -175,6 +176,11 @@ export default {
             )
             .style("left", event.x - tooltip.property("offsetWidth") + "px")
             .style("top", event.y - tooltip.property("offsetHeight") - y_offset + "px");
+            }
+            else{
+                tooltip.transition().duration(100).style("visibility","hidden");
+            }
+            
             };
 
             let hideTooltip = function (event, d) {
