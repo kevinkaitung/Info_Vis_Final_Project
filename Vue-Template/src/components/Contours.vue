@@ -273,11 +273,13 @@ export default {
                 .on('mouseover', function (event, d) {
                     showTooltip(event, d)
                     if(v.layer_selected < 0){
+                        v.passHoverID(d.layer, true)
                         d3.selectAll(".layer_" + d.layer).transition()
                         .duration('50')
                         .attr("fill", "yellow")
                         d3.select("#toptext").text("hovered: layer" + d.layer)} 
                     else if(v.cmpt_selected < 0 && d.value == v.filter_val){
+                        v.passHoverID(d.cmpt, true)
                         d3.selectAll(".cmpt_" + d.cmpt).transition()
                         .duration('50')
                         .attr("fill", "yellow")
@@ -301,6 +303,7 @@ export default {
                             }
                         }
                         else{
+                            v.passHoverID(d.layer, false)
                             d3.selectAll(".contours").each(function (d){
                             d3.select(this)
                             .transition().duration('50')
@@ -320,6 +323,7 @@ export default {
                             .attr("visibility", "visible").attr("fill","white")
                             //bounded_zoomIn(event, d, d.cmpt)
                         }
+                        v.passHoverID(d.cmpt, false)
                         d3.selectAll(".cmpt_" + d.cmpt).transition()
                         .duration('50')
                         .attr("fill",  v.cmpt_selected > 0 ? "brown" : d => colors[d.layer-1])
@@ -340,6 +344,7 @@ export default {
                         .attr("fill", v.layer_selected > 0 ? colors[v.layer_selected-1] : "orange")
                         .attr("d", d3.geoPath())
                         .on('mouseover', function (event, d) {
+                            v.passHoverID(d.value, true)
                             showTooltip(event, d)
                             d3.select(this).transition()
                             .duration('50')
@@ -356,6 +361,7 @@ export default {
                             d3.select("#toptext2").text("last clicked: " + this.id)
                         })
                         .on('mouseout', function (event, d) {
+                            v.passHoverID(d.value, false)
                             hideTooltip(event, d)
                             let selection =  d3.select(this).transition()
                                 .duration('50')
@@ -391,6 +397,9 @@ export default {
         // level_selected = 0 (for layer), 1 (for component), 2 (for cell)
         passParamsToAuxiliary(level_selected, id_selected) {
             this.emitter.emit('selected_info_passed', {'level_selected': level_selected, 'id_selected': id_selected});
+        },
+        passHoverID(id_hovered, is_hover_in) {
+            this.emitter.emit('hovered_info_passed', {'id_hovered': id_hovered, 'is_hover_in': is_hover_in});
         },
     },
     watch: {
