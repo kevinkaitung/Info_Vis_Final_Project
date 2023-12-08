@@ -1,26 +1,13 @@
 <script lang="ts">
 import * as d3 from "d3";
-import Data from '../../data/temp_data_s30.json'; /* Example of reading in data directly from file */
-import axios from 'axios';
+import Data from '../../data/temp_data_s30.json'; /* Default data is slice taken at x=30 */
 import { isEmpty, debounce } from 'lodash';
-import { Bar, ComponentSize, Margin } from '../types';
 
-// A "extends" B means A inherits the properties and methods from B.
-interface CategoricalBar extends Bar{
-    category: string;
-}
-
-// Computed property: https://vuejs.org/guide/essentials/computed.html
-// Lifecycle in vue.js: https://vuejs.org/guide/essentials/lifecycle.html#lifecycle-diagram
 
 export default {
-    props: ['thing'],
     data() {
         // Here we define the local states of this component. If you think the component as a class, then these are like its private variables.
         return {
-            bars: [] as CategoricalBar[], // "as <Type>" is a TypeScript expression to indicate what data structures this variable is supposed to store.
-            size: { width: 0, height: 0 } as ComponentSize,
-            margin: {left: 40, right: 20, top: 20, bottom: 60} as Margin, 
 
             slice: -1,
 
@@ -54,19 +41,9 @@ export default {
             return (!isEmpty(this.grid_vox)) && this.size
         },
     },
+
      // Anything in here will only be executed once.
-    // Refer to the lifecycle in Vue.js for more details, mentioned at the very top of this file.
     created() {
-        // fetch the data via GET request when we init this component. 
-        // In axios anything we send back in the response are always bound to the "data" property.
-        /*
-        axios.get(`<some-API-endpoint>`)
-            .then(resp => { 
-                this.bars = resp.data; // resp.data contains the content, with the format specified by the API you use.
-                return true;
-            })
-            .catch(error => console.log(error));
-        */
        
         if (isEmpty(Data)) return;
         this.grid_vox = Data.vox_grid;
@@ -79,12 +56,9 @@ export default {
         this.threshold_cell = Data.cell_thresh;
         this.siteCmptIds = Data.siteCmptIds
         this.slice = Data.slice
-
         
-
     },
     methods: {
-        
         shapeContains(inner_polygon, outer_polygon) {
             const geo = d3.geoPath()
             let bounds = geo.bounds(outer_polygon)
@@ -96,7 +70,6 @@ export default {
                 return false
             }
         },
-
         transform: ({type, value, coordinates}) => {
             let coords = coordinates.map(rings => {
                 return rings.map(points => {
@@ -133,7 +106,6 @@ export default {
             })
             return contourPolygons
         },
-
         generateContours(thresh, grid_in) {
             let contours = thresh.map((c) => { 
                 if(c > 0){
@@ -205,8 +177,6 @@ export default {
             .style("top", event.y - tooltip.property("offsetHeight") - y_offset + "px");
             };
 
-
-        // A function that change this tooltip when the leaves a point: just need to set opacity to 0 again
             let hideTooltip = function (event, d) {
             tooltip.transition().duration(100).style("visibility","hidden");
             };
@@ -423,9 +393,6 @@ export default {
 }
 
 </script>
-
-<!-- "ref" registers a reference to the HTML element so that we can access it via the reference in Vue.  -->
-<!-- We use flex (d-flex) to arrange the layout // 100% 66%-->
 <template>
     <div  style="font-size:30px;"><b>Turbulent Combustion Visualization</b></div>
     <div class="chart-container">
@@ -438,8 +405,6 @@ export default {
         <div style="text-align:right;font-size:20px;" ><b>y</b></div>
         <div style="font-size:25px;"><b>x</b> = {{this.slice}}</div>
     </div>
-    
-    
 </template>
 
 <style scoped>
