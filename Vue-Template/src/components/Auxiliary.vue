@@ -54,6 +54,7 @@ export default {
   created() {
     // register for the event bus
     this.emitter.on("selected_info_passed", this.recieveParamsFromContours);
+    this.emitter.on("hovered_info_passed", this.recieveHoveredID);
     // fetch the data via GET request when we init this component.
     // In axios anything we send back in the response are always bound to the "data" property.
     /*
@@ -209,6 +210,19 @@ export default {
 
         this.replotScatterPlot();
       }
+    },
+    recieveHoveredID(evt) {
+      let chartContainer = d3.select("#bar-svg3").selectAll("rect");
+      chartContainer.filter(function (d, i) {
+        if (d.id == evt.id_hovered) {
+          if (evt.is_hover_in == true) {
+            d3.select(this).attr("fill", "yellow");
+          }
+          else {
+            d3.select(this).attr("fill", "#ADD8E6");
+          }
+        }
+      });
     },
     onResize() {
       // record the updated size of the target element
@@ -366,10 +380,6 @@ export default {
         .text(
           "Temperature/OH of Voxels in Selected Regions" /*+ this.scatter_plot_showing_level*/
         ); // text content
-
-      let cnt = d3
-        .select("#count")
-        .html("debug (plot points count): " + this.data_scatter_plot.length);
     },
     barChart() {
       let chartContainer = d3.select("#bar-svg3");
@@ -430,10 +440,6 @@ export default {
         )
         .call(axs.tickValues(filtered_ticks));
 
-      const yAxis = chartContainer
-        .append("g")
-        .attr("transform", `translate(${this.margin.left}, 0)`)
-        .call(d3.axisLeft(yScale));
 
       const xLabel = chartContainer
         .append("g")
@@ -447,17 +453,6 @@ export default {
         .text(this.bar_chart_showing_level + " Ids")
         .style("font-size", ".8rem");
 
-      const yLabel = chartContainer
-        .append("g")
-        .attr(
-          "transform",
-          `translate(${this.margin.left - 50}, ${
-            this.size.height / 4
-          }) rotate(-90)`
-        )
-        .append("text")
-        .text("Mean and Standard Deviation")
-        .style("font-size", ".8rem");
 
       // create error bar shape
       function erro_bar(d: any) {
@@ -520,6 +515,12 @@ export default {
       let hideTooltip = function (event, d) {
         tooltip.transition().duration(100).style("opacity", 0);
       };
+      let barChangeColor = function (event, d, obj: any) {
+        obj.attr("fill", "yellow");
+      };
+      let barReverseColor = function (event, d, obj: any) {
+        obj.attr("fill", "#ADD8E6");
+      };
 
       // zoom scale limit
       let zoomScaLimit = 0;
@@ -534,7 +535,7 @@ export default {
       const zoom = d3
         .zoom()
         .scaleExtent([1, zoomScaLimit])
-        //.translateExtent([[this.margin.left, 0],[this.size.width - this.margin.right, this.size.height]])
+        .translateExtent([[0, 0],[this.size.width, this.size.height]])
         .on("zoom", zoomed);
 
       chartContainer.call(zoom);
@@ -555,9 +556,15 @@ export default {
           Math.abs(yScale(yScale.domain()[0]) - yScale(d.meanTemp))
         ) // this substraction is reversed so the result is non-negative
         .attr("fill", "#ADD8E6")
-        .on("mouseover", showTooltip)
+        .on("mouseover", function (event, d) {
+          showTooltip(event, d);
+          barChangeColor(event, d, d3.select(this));
+        })
         .on("mousemove", moveTooltip)
-        .on("mouseleave", hideTooltip);
+        .on("mouseleave", function (event, d) {
+          hideTooltip(event, d);
+          barReverseColor(event, d, d3.select(this));
+        });
 
       const error_bars = chartContainer.append("g");
 
@@ -583,6 +590,24 @@ export default {
         .style("text-anchor", "middle")
         .style("font-weight", "bold")
         .text("Statistics from Level " + this.bar_chart_showing_level); // text content
+
+      
+      const yAxis = chartContainer
+        .append("g")
+        .attr("transform", `translate(${this.margin.left}, 0)`)
+        .call(d3.axisLeft(yScale));
+      
+      const yLabel = chartContainer
+        .append("g")
+        .attr(
+          "transform",
+          `translate(${this.margin.left - 50}, ${
+            this.size.height / 4
+          }) rotate(-90)`
+        )
+        .append("text")
+        .text("Mean and Standard Deviation")
+        .style("font-size", ".8rem");
 
       let tooltip = d3
         .select("#root")
@@ -667,7 +692,6 @@ export default {
 <!-- "ref" registers a reference to the HTML element so that we can access it via the reference in Vue.  -->
 <!-- We use flex (d-flex) to arrange the layout-->
 <template>
-  <p id="count"></p>
   <div class="chart-container d-flex" ref="barContainer">
     <v-col id="root">
       <svg id="bar-svg2" width="100%" height="50%">

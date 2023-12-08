@@ -1,54 +1,63 @@
-# More about the Framework
+# Turbulent Combustion Visualization
 
+This Vue application visualizes slices of 3D turbulent combustion data taken along the x-axis. 
 
-This is a tempalate in Vue.js and TypeScript. Vue 3.0 sits between React and basic JavaScript depending on the developers comfort level. For this class, we stick with [Options API](https://vuejs.org/api/#options-api) rather than Composition API (not required so you can switch depending on how you feel). We offer Vue, since it is a modern framework that companies use so it could be useful for you if one of your projects in this class could make use of it.
-
-What this page covers:
- - Pointers if you want to use your own setup or a simpler template for the assignment
- - **The files you have to care about**
- - Libraries used in this framework
-
-## Other Setups
-
-If you want to be free of any frontend frameworks (e.g., Vue.js and React), go to the `VanillaJS-Template` folder.
-If you want to use Vue.js but not with TypeScript, just remove any type specifications from the `Example.vue`. You can always refer to `VanillaJS-Template/example.js` for this migration.
-
-
-## The Files You Have to Care about
-
-`package.json` is where we manage the libraries we installed. Besides this, most of the files you can ignore, but **the files under `./src/` are your concern**.
-
-* `./src/main.ts` is the root script file for Vue.js that instatinates our single page application.
-* `./src/App.vue` is the root file for all **development** needs and is also where we manage the layout and load in components.
-* `./src/types.ts` is usually where we declare our customized types (if you have any)
-* `./src/stores/` is where we manage the stores if you're planning to use it. The store is a container that holds your application state.
-* `./src/components/` is where we create the components. You may have multiple components depends on your design.
-
-## Libraries Installed in this Framework
+## Libraries/Dependencies Installed in this Framework
  * D3.js v7 for visualization
  * [axios](https://axios-http.com/docs/intro) for API.
  * [pinia](https://pinia.vuejs.org/introduction.html) for store management in Vue.js
  * [Vuetify](https://next.vuetifyjs.com/en/components/all/) for UI that follows Google Material Design 3.
  * [lodash](https://lodash.com/) for utility functions in JavaScript.
 
+## Set-up
 
-# Vite 
+To set up the application: 
 
-**NOTE: the following is from Vite, which you can ignore it.**
+1. Install packages from package.json:
+`cd ./Vue-Template`, then `npm install`
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+2. Run the application with `npm run dev`, which will be hosted at `localhost:3000`
 
-## Recommended IDE Setup
+Currently, the application can only display one slice at a given time. 
+By default, it will load in the data from and generate visualizations for the slice at `x = 30`.
+However, multiple slice files are available to visualize within the `data` folder. 
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+To change the slice to visualize, change the line `import data from '../../data/temp_data_s30.json'` in both `/src/Contours.Vue` and `/src/Auxillary.Vue` to be `import data from '../../data/temp_data_sN.json'` where N is the number of an available slice in the `data` folder. 
 
-## Type Support For `.vue` Imports in TS
+## Navigation Interactions:
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
+Upon loading the application, the visualization system will be set to show all data at the highest level of abstraction, the layer level view. The intended displays and interactions for each level of abstraction are outlined below.
 
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
+### Layer Level View
 
-1. Disable the built-in TypeScript Extension
-   1. Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-   2. Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
+**Interactive View:** Displays all layer contour generated by input voxel data; 
+1. Hover over layer contour to highlight it. This will display the layer's id and the cursor's current y-z position relative to the slice.
+2. Click on a layer to select it.  This will bring you into the component level view, where all polygon elements not associated with the selected layer are hidden.
+
+**Auxillary View:** The scatter plot will display points for all voxels associated with the displayed layer contours; Meanwhile, the barchart will display the mean and standard deviation for temperature for each displayed layer. Hovering over a bar shows additional aggregate statistics (mean and standard deviation) on OH radical concentration for its associated layer. 
+
+### Component Level View: 
+
+**Interactive View:** Displays all component contours for the selected layer. 
+1. Hover over a component to highlight it; This will display the component's id, its layer id, and the cursor's y-z position.
+2. Click on a component to select it. This will bring you into the cell level view, where the selected component and its indivdual cells are all visible while the elements not associated with the selected component are hidden. 
+3. Double click on the white space (outside the components) to return to the layer level view. 
+
+**Auxillary View:** The scatter plot will display points for all voxels associated with the selected layer; Meanwhile, the barchart will display the mean and standard deviation for temperature for each displayed component. Hovering over a bar shows additional aggregate statistics (mean and standard deviation) on OH radical concentration for its associated component. 
+
+### Cell Level View: 
+
+**Interactive View:** Displays all cells for the selected component.
+1. Hover over a cell to highlight it; This will display the cell's id, its component id, and its layer id, along with the cursor's y-z position.
+2. Click on the cell to select it. This will change its color, indicating that its voxels has been selected to be displayed on the scatter plot (see Auxillary view description below)
+3. Double click on the white space (outside the component) to return to the component level view.
+
+**Auxillary View:** Initially, the scatter plot will display points for all voxels associated with the selected component. Upon selecting cells in the interactive view, however, the scatter plot will update to only show the points associated with the voxels of the selected cell(s). 
+Meanwhile, the barchart will display the mean and standard deviation for temperature for each displayed cell. Hovering over a bar shows additional aggregate statistics (mean and standard deviation) on OH radical concentration for its associated cell. 
+
+
+## Other Interactions:
+
+**Interactive View:** For all levels of abstraction, you can zoom into the display by scrolling, then move around by clicking and dragging the chart to go in the direction you want to. 
+
+**Auxillary View:** For the component and cell level views, users can pan the bars of the bar chart out by scrolling on the display. 
