@@ -380,10 +380,6 @@ export default {
         .text(
           "Temperature/OH of Voxels in Selected Regions" /*+ this.scatter_plot_showing_level*/
         ); // text content
-
-      let cnt = d3
-        .select("#count")
-        .html("debug (plot points count): " + this.data_scatter_plot.length);
     },
     barChart() {
       let chartContainer = d3.select("#bar-svg3");
@@ -444,10 +440,6 @@ export default {
         )
         .call(axs.tickValues(filtered_ticks));
 
-      const yAxis = chartContainer
-        .append("g")
-        .attr("transform", `translate(${this.margin.left}, 0)`)
-        .call(d3.axisLeft(yScale));
 
       const xLabel = chartContainer
         .append("g")
@@ -461,17 +453,6 @@ export default {
         .text(this.bar_chart_showing_level + " Ids")
         .style("font-size", ".8rem");
 
-      const yLabel = chartContainer
-        .append("g")
-        .attr(
-          "transform",
-          `translate(${this.margin.left - 50}, ${
-            this.size.height / 4
-          }) rotate(-90)`
-        )
-        .append("text")
-        .text("Mean and Standard Deviation")
-        .style("font-size", ".8rem");
 
       // create error bar shape
       function erro_bar(d: any) {
@@ -554,7 +535,7 @@ export default {
       const zoom = d3
         .zoom()
         .scaleExtent([1, zoomScaLimit])
-        //.translateExtent([[this.margin.left, 0],[this.size.width - this.margin.right, this.size.height]])
+        .translateExtent([[0, 0],[this.size.width, this.size.height]])
         .on("zoom", zoomed);
 
       chartContainer.call(zoom);
@@ -609,6 +590,24 @@ export default {
         .style("text-anchor", "middle")
         .style("font-weight", "bold")
         .text("Statistics from Level " + this.bar_chart_showing_level); // text content
+
+      
+      const yAxis = chartContainer
+        .append("g")
+        .attr("transform", `translate(${this.margin.left}, 0)`)
+        .call(d3.axisLeft(yScale));
+      
+      const yLabel = chartContainer
+        .append("g")
+        .attr(
+          "transform",
+          `translate(${this.margin.left - 50}, ${
+            this.size.height / 4
+          }) rotate(-90)`
+        )
+        .append("text")
+        .text("Mean and Standard Deviation")
+        .style("font-size", ".8rem");
 
       let tooltip = d3
         .select("#root")
@@ -693,7 +692,6 @@ export default {
 <!-- "ref" registers a reference to the HTML element so that we can access it via the reference in Vue.  -->
 <!-- We use flex (d-flex) to arrange the layout-->
 <template>
-  <p id="count"></p>
   <div class="chart-container d-flex" ref="barContainer">
     <v-col id="root">
       <svg id="bar-svg2" width="100%" height="50%">
